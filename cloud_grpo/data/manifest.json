@@ -1,0 +1,46 @@
+{
+  "format": "TRL conversational prompt-completion + GRPO prompt JSONL",
+  "sft_train_count": 218,
+  "sft_eval_count": 42,
+  "grpo_prompt_count": 90,
+  "grpo_hard_prompt_count": 26,
+  "grpo_hard_source": "V3-30 真实 rollout 失败案例",
+  "grpo_hard_error_distribution": {
+    "aggregation": 3,
+    "date": 5,
+    "duplicate_counting": 7,
+    "filter": 2,
+    "join_type": 7,
+    "schema_linking": 1,
+    "syntax_error": 1
+  },
+  "grpo_hard_source_distribution": {
+    "development": 9,
+    "v3_increment": 17
+  },
+  "grpo_error_distribution": {
+    "aggregation": 12,
+    "date": 15,
+    "duplicate_counting": 7,
+    "filter": 17,
+    "join_type": 15,
+    "schema_linking": 13,
+    "syntax_error": 11
+  },
+  "reward_database_count": 2,
+  "final_holdouts_included": false,
+  "excluded_files": [
+    "data/final_holdout.jsonl",
+    "data/final_holdout_v3.jsonl"
+  ],
+  "mlx_adapter_included": false,
+  "mlx_adapter_note": "MLX Adapter 与 PyTorch/TRL Adapter 格式不同；云端先重建标准 PEFT SFT Adapter。",
+  "files": {
+    "sft_train": "sft_train.jsonl",
+    "sft_eval": "sft_eval.jsonl",
+    "grpo_train": "grpo_train.jsonl",
+    "grpo_hard_train": "grpo_hard_train.jsonl",
+    "demo_database": "finance_demo.db",
+    "training_database": "train_finance.db"
+  }
+}
