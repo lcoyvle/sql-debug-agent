@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+.pytest_cache/
+.venv/
+.env
+artifacts/
+data/finance_demo.db
+cloud_outputs/
+*.safetensors
+*.parquet
+*.zip
+*.egg-info/
