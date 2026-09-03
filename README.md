@@ -398,3 +398,104 @@ V3 不累加导致退化的 V2 增量数据，而是使用 158 条 V1 能力回�
 `artifacts/rl_v1/replay_v3_30/report.md`。奖励层已经通过，但 SFT 最终留出集仍有回退，
 所以 GRPO 训练开关继续保持关闭。
 
+## Corrective Replay 偏好替代实验
+
+当前 MLX-LM 没有 DPO/GRPO trainer，因此先测试适合本机的替代方案：将 26 条真实失败
+的 chosen SQL 与 26 条强项保护样本组成 52 条数据，从 V3-30 Adapter 继续训练 5/10
+步，学习率降为 `5e-6`。
+
+```bash
+.venv/bin/python -m sql_debug_agent build-preference-replay
+
+.venv/bin/python -m sql_debug_agent train-sft \
+  --iters 10 --learning-rate 5e-6 \
+  --resume-adapter-file artifacts/adapters/sft_v3_30/adapters.safetensors \
+  --sft-train artifacts/preference_v1/sft_train.jsonl \
+  --sft-eval artifacts/preference_v1/sft_eval.jsonl \
+  --data-dir artifacts/mlx_preference_v1 \
+  --adapter-path artifacts/adapters/preference_v1_10 \
+  --sql-terminator
+```
+
+结果是 V3-30、5 步、10 步开发集均为 21/30；10 步候选在 90 条回放上仍为 64/90，
+重复错误仍为 6 条。自动门槛因此拒绝候选，当前模型仍是 V3-30：
+
+```bash
+.venv/bin/python -m sql_debug_agent compare-replays
+```
+
+完整负实验见 `docs/preference_replay_report.md`。它说明普通 SFT 没有利用 rejected SQL
+的相对信号，后续若要真正做偏好/RL，需要 DPO 或 GRPO trainer。
+
+## 小型演示数据转换
+
+```bash
+python3 -m sql_debug_agent prepare-sft
+```
+
+处理逻辑不是简单下载数据集，而是把每条原始 Bad Case 转成：
+
+```text
+问题 + Schema + 错误 SQL + 执行反馈 → 正确 SQL
+```
+
+该命令只转换最初的 5 条教学样例，生成文件位于 `artifacts/sft/`。正式训练应使用
+上面的 `build-data` 命令。每条 SFT 数据都保留错误类型、模板、基线可执行性和
+基线奖励，便于后续分类型分析。
+
+## 运行测试
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+## 项目结构
+
+```text
+sql-debug-agent/
+├── data/
+│   ├── tasks.jsonl             # 原始问题、错误 SQL、参考 SQL、错误类型
+│   ├── baseline_eval.jsonl      # 用于迭代和 Bad Case 分析的 30 题开发集
+│   ├── final_holdout.jsonl       # V2 训练前冻结的 35 题最终留出集
+│   ├── final_holdout_v3.jsonl    # V3 训练前冻结的 28 题最终留出集
+│   ├── sft_v2_increment.jsonl    # 60 条 V2 针对性增量数据
+│   ├── sft_v3_increment.jsonl    # 60 条 V3 泛化与防遗忘数据
+│   ├── sft_raw.jsonl            # 200 条正式训练 Bad Case
+│   └── train_finance.db         # 与测试库分离的训练数据库
+├── docs/
+│   └── roadmap.md              # SFT、Bad Case、GRPO 迭代路线
+├── sql_debug_agent/
+│   ├── agent.py                # 多轮 Agent 循环
+│   ├── database.py             # 建库、造数、Schema 工具
+│   ├── verifier.py             # 执行与结果验证、奖励
+│   ├── repair.py               # 可替换的修复器接口
+│   ├── model_prompt.py          # 两种模型共用的提示词与 JSON Schema
+│   ├── ollama_repair.py         # 本地 Ollama 模型修复器
+│   ├── openai_repair.py         # 可选 Responses API 模型修复器
+│   ├── preparation.py          # SFT 数据加工与切分
+│   ├── data_generation.py      # 针对性数据生成、验证与去重
+│   ├── badcase_analysis.py     # 基线失败分析与阶段决策
+│   ├── mlx_training.py         # MLX 数据整理与 8GB LoRA 训练入口
+│   ├── mlx_repair.py           # Base/Adapter 的 MLX 推理修复器
+│   ├── comparison.py           # Base 与 SFT 对比及回退检测
+│   ├── experiment_summary.py   # 三方实验总结与 RL 阶段门槛
+│   ├── v3_data.py              # V3 新留出集和多模板训练数据
+│   ├── rl_reward.py            # 多数据库、轨迹感知的稳健奖励函数
+│   ├── rl_data.py              # 偏好数据与 GRPO prompts 构建
+│   ├── rl_replay.py            # 真实模型 rollout、奖励回放与 hard pairs
+│   ├── preference_replay.py    # 真实失败纠错与强项保护数据
+│   ├── evaluation.py           # 基线和修正后对比
+│   └── cli.py                  # 命令行入口
+└── tests/
+    └── test_agent.py
+```
+
+## 核心指标
+
+- `execution accuracy`：SQL 能安全执行，但不代表答案正确。
+- `execution-match accuracy`：候选 SQL 与参考 SQL 的执行结果完全一致。
+- `repair success rate`：初始结果错误、经过修正后正确的比例。
+- `turns to success`：成功前使用的工具调用轮数。
+- `accuracy by error type`：按 JOIN、聚合、Schema 等类型分析表现。
+
+完整迭代安排见 [docs/roadmap.md](docs/roadmap.md)。
