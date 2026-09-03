@@ -1,0 +1,46 @@
+{
+  "experiment": "cloud_peft_sft_grpo_final",
+  "model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+  "evaluation": {
+    "dataset": "final_holdout_v3.jsonl",
+    "dataset_sha256": "51d8caad2e12d1e6e11ab2b8febf05f6e0ef8466b025e32dbd6cc3c4dd454c67",
+    "task_count": 28,
+    "deterministic_generation": true,
+    "single_repair_turn": true,
+    "dual_database_execution_match": true,
+    "holdout_used_for_training": false
+  },
+  "runs": {
+    "base": {
+      "correct": 16,
+      "accuracy": 0.5714285714285714
+    },
+    "sft": {
+      "correct": 23,
+      "accuracy": 0.8214285714285714,
+      "steps": 60
+    },
+    "grpo": {
+      "correct": 25,
+      "accuracy": 0.8928571428571429,
+      "steps": 40,
+      "reward_variance_steps": 3,
+      "reward_variance_step_rate": 0.075
+    }
+  },
+  "sft_to_grpo": {
+    "accuracy_delta": 0.0714285714285715,
+    "fixed_tasks": [
+      "v3_holdout_schema_linking_03",
+      "v3_holdout_schema_linking_04"
+    ],
+    "regressed_tasks": [],
+    "remaining_failed_tasks": [
+      "v3_holdout_aggregation_03",
+      "v3_holdout_date_04",
+      "v3_holdout_duplicate_counting_01"
+    ]
+  },
+  "winner": "sft_plus_grpo",
+  "verdict": "GRPO 在冻结测试集上超过 SFT，且没有任务回退。"
+}
