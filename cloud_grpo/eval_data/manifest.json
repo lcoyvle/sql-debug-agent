@@ -1,0 +1,8 @@
+{
+  "purpose": "post-training frozen evaluation only",
+  "dataset": "final_holdout_v3.jsonl",
+  "task_count": 28,
+  "sha256": "51d8caad2e12d1e6e11ab2b8febf05f6e0ef8466b025e32dbd6cc3c4dd454c67",
+  "included_in_sft_or_grpo_training": false,
+  "warning": "上传后不得再使用该测试集继续训练或选择超参数。"
+}
